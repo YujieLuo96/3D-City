@@ -12,33 +12,42 @@ MAX_VISIBLE_CHUNKS = 2  # Reduced number of visible chunks for better performanc
 BUILDING_TYPES = ['modern', 'classic', 'asian', 'european', 'futuristic']
 TIME_CYCLE_DURATION = 240  # Duration of a day-night cycle in seconds
 INITIAL_TIME = 0.5  # Start at midday (noon) for better visibility
+SPAWN_POSITION = (3, 0.5, 3)  # Ensure this is on a road in the first chunk
 
 # Scale configuration - based on realistic proportions
-STREET_WIDTH = 2.0  # Width of streets (approximately 7 meters)
-SIDEWALK_WIDTH = 0.5  # Width of sidewalks (approximately 1.5 meters)
+STREET_WIDTH = 3.5  # Width of streets (approximately 12 meters) - WIDENED
+SIDEWALK_WIDTH = 0.8  # Width of sidewalks (approximately 2.5 meters) - WIDENED
 BUILDING_WIDTH = 3.0  # Width of buildings (approximately 10 meters)
 PLAYER_HEIGHT = 1.8  # Height of player (approximately 1.8 meters)
 STORY_HEIGHT = 1.0  # Height of one story (approximately 3 meters)
 VEHICLE_LENGTH = 1.5  # Length of vehicles (approximately 5 meters)
 
-# Temporary texture color definitions
+# Enhanced texture color definitions - realistic urban color palette
 temp_textures = {
-    'grass': color.green,
-    'road': color.gray,
-    'asphalt': color.dark_gray,
-    'sidewalk': color.light_gray,
-    'crosswalk': color.white,
-    'modern': color.blue,
-    'classic': color.brown,
-    'asian': color.red,
-    'european': color.orange,
-    'futuristic': color.cyan,
-    'tree': color.rgb(0, 100, 0),
-    'flower': color.pink,
-    'car1': color.yellow,
-    'car2': color.white,
-    'car3': color.red,
-    'car4': color.blue,
+    'grass': color.rgb(76, 120, 40),  # Richer grass green
+    'road': color.rgb(50, 50, 50),  # Darker asphalt
+    'asphalt': color.rgb(40, 40, 40),  # Deeper asphalt for better contrast
+    'sidewalk': color.rgb(210, 210, 210),  # Lighter concrete gray
+    'crosswalk': color.rgb(250, 250, 250),  # Bright white markings
+    'modern': color.rgb(120, 170, 195),  # Steel blue glass - more saturated
+    'modern_accent': color.rgb(200, 200, 200),  # Brighter steel/aluminum accents
+    'classic': color.rgb(180, 90, 70),  # Brighter brick red
+    'classic_accent': color.rgb(225, 205, 165),  # Warmer sandstone/limestone
+    'asian': color.rgb(160, 40, 40),  # Richer deep red
+    'asian_accent': color.rgb(235, 195, 65),  # Brighter gold accent
+    'european': color.rgb(240, 220, 185),  # Warmer cream stucco
+    'european_accent': color.rgb(135, 100, 85),  # Richer brown trim
+    'futuristic': color.rgb(235, 240, 250),  # Brighter white/silver
+    'futuristic_accent': color.rgb(125, 215, 245),  # Brighter light blue accent
+    'tree': color.rgb(45, 105, 35),  # Deep foliage green
+    'tree_trunk': color.rgb(100, 75, 40),  # Natural bark brown
+    'flower': color.rgb(245, 100, 135),  # Brighter pink blossoms
+    'car1': color.rgb(40, 65, 130),  # Richer dark blue
+    'car2': color.rgb(160, 160, 160),  # Brighter silver/gray
+    'car3': color.rgb(195, 50, 50),  # Brighter red
+    'car4': color.rgb(40, 85, 60),  # Richer deep green
+    'roof': color.rgb(80, 80, 90),  # Darker slate roof
+    'roof_light': color.rgb(135, 125, 115),  # Lighter roof tiles
 }
 
 # Global variables
@@ -76,7 +85,7 @@ class Chunk:
         grid = np.zeros((CHUNK_SIZE, CHUNK_SIZE))
 
         # Create a regular grid of streets
-        # Every other cell is a street in both directions
+        # Street grid with improved spacing for wider streets
         for i in range(CHUNK_SIZE):
             for j in range(CHUNK_SIZE):
                 # Mark streets - we'll use a grid where every third cell is a street
@@ -105,13 +114,13 @@ class Chunk:
         world_x = chunk_x * CHUNK_SIZE
         world_z = chunk_z * CHUNK_SIZE
 
-        # Create ground for the entire chunk
+        # Create ground for the entire chunk with proper collider
         ground = Entity(
             model='plane',
             scale=(CHUNK_SIZE, 1, CHUNK_SIZE),
             position=(world_x + CHUNK_SIZE / 2 - 0.5, 0, world_z + CHUNK_SIZE / 2 - 0.5),
             color=temp_textures['grass'],
-            collider='box'
+            collider='box'  # Ensure collider is set
         )
         self.entities.append(ground)
 
@@ -132,6 +141,21 @@ class Chunk:
                 )
                 self.entities.append(detail)
 
+        # Check if this is the spawn chunk and create a special marker
+        spawn_chunk_x = math.floor(SPAWN_POSITION[0] / CHUNK_SIZE)
+        spawn_chunk_z = math.floor(SPAWN_POSITION[2] / CHUNK_SIZE)
+
+        if chunk_x == spawn_chunk_x and chunk_z == spawn_chunk_z:
+            # Create a small visible marker at spawn point
+            spawn_marker = Entity(
+                model='sphere',
+                scale=0.2,
+                position=(SPAWN_POSITION[0], 0.1, SPAWN_POSITION[2]),
+                color=color.yellow
+            )
+            self.entities.append(spawn_marker)
+            print(f"Created spawn marker at {SPAWN_POSITION}")
+
     def generate_streets(self):
         """Generate streets, sidewalks, and crosswalks"""
         chunk_x, chunk_z = self.position
@@ -143,10 +167,10 @@ class Chunk:
                 cell_type = self.city_plan[x, z]
 
                 if cell_type == 1 or cell_type == 2:  # Street or intersection
-                    # Main road surface
+                    # Main road surface - WIDENED
                     road = Entity(
                         model='cube',
-                        scale=(1, 0.1, 1),
+                        scale=(1.5, 0.1, 1.5),  # Widened from (1, 0.1, 1)
                         position=(world_x + x, 0.05, world_z + z),
                         color=temp_textures['asphalt'],
                     )
@@ -172,10 +196,10 @@ class Chunk:
                         road_network[road_key] = []
 
                         if is_horizontal:
-                            # Add horizontal road markings
+                            # Add horizontal road markings - WIDENED
                             marking = Entity(
                                 model='cube',
-                                scale=(0.9, 0.11, 0.05),
+                                scale=(1.4, 0.11, 0.08),  # Widened from (0.9, 0.11, 0.05)
                                 position=(world_x + x, 0.1, world_z + z),
                                 color=temp_textures['crosswalk']
                             )
@@ -186,10 +210,10 @@ class Chunk:
                             road_network[road_key].append(Vec3(-1, 0, 0))
 
                         if is_vertical:
-                            # Add vertical road markings
+                            # Add vertical road markings - WIDENED
                             marking = Entity(
                                 model='cube',
-                                scale=(0.05, 0.11, 0.9),
+                                scale=(0.08, 0.11, 1.4),  # Widened from (0.05, 0.11, 0.9)
                                 position=(world_x + x, 0.1, world_z + z),
                                 color=temp_textures['crosswalk']
                             )
@@ -200,10 +224,10 @@ class Chunk:
                             road_network[road_key].append(Vec3(0, 0, -1))
 
                     elif cell_type == 2:  # Intersection
-                        # Crosswalk at intersection
+                        # Crosswalk at intersection - WIDENED
                         crosswalk = Entity(
                             model='cube',
-                            scale=(0.9, 0.12, 0.9),
+                            scale=(1.4, 0.12, 1.4),  # Widened from (0.9, 0.12, 0.9)
                             position=(world_x + x, 0.1, world_z + z),
                             color=color.light_gray
                         )
@@ -234,7 +258,7 @@ class Chunk:
             if self.city_plan[nx, nz] == 0 and cell_type in [1, 2]:
                 sidewalk = Entity(
                     model='cube',
-                    scale=(0.5, 0.2, 0.5),
+                    scale=(0.8, 0.2, 0.8),  # Widened from (0.5, 0.2, 0.5)
                     position=(x + dx * 0.5, 0.1, z + dz * 0.5),
                     color=temp_textures['sidewalk']
                 )
@@ -287,7 +311,7 @@ class Chunk:
                         scale=(building_width * 0.8, 0.3),
                         position=(x, building_height / 2 + window_y, z),
                         rotation=(0, rotation, 0),
-                        color=color.rgba(200, 230, 255, 200),
+                        color=color.rgba(210, 240, 255, 200),  # Enhanced blue glass windows
                         double_sided=True
                     )
                     self.entities.append(window)
@@ -300,7 +324,15 @@ class Chunk:
                 model='cube',
                 scale=(building_width, building_height * 0.7, building_width),
                 position=(x, building_height * 0.35, z),
-                color=temp_textures[building_type]
+                color=temp_textures['classic']
+            )
+
+            # Add stone foundation
+            foundation = Entity(
+                model='cube',
+                scale=(building_width + 0.05, building_height * 0.1, building_width + 0.05),
+                position=(x, building_height * 0.05, z),
+                color=temp_textures['classic_accent']
             )
 
             # Add a small roof structure
@@ -308,7 +340,15 @@ class Chunk:
                 model='cube',
                 scale=(building_width + 0.1, building_height * 0.1, building_width + 0.1),
                 position=(x, building_height * 0.75, z),
-                color=color.dark_gray
+                color=temp_textures['roof_light']
+            )
+
+            # Add decorative cornice
+            cornice = Entity(
+                model='cube',
+                scale=(building_width + 0.15, building_height * 0.05, building_width + 0.15),
+                position=(x, building_height * 0.7, z),
+                color=temp_textures['classic_accent']
             )
 
             # Add windows in a grid pattern
@@ -333,17 +373,29 @@ class Chunk:
                             window_x = building_width / 2 * (1 if side == 1 else -1)
                             window_z = offset
 
+                        # Window frame
+                        frame = Entity(
+                            model='quad',
+                            scale=(window_width + 0.03, window_height + 0.03),
+                            position=(x + window_x, building_height * 0.35 + window_y, z + window_z),
+                            rotation=(0, rotation_y, 0),
+                            color=temp_textures['classic_accent'],
+                            double_sided=True
+                        )
+
+                        # Window glass
                         window = Entity(
                             model='quad',
                             scale=(window_width, window_height),
-                            position=(x + window_x, building_height * 0.35 + window_y, z + window_z),
+                            position=(x + window_x, building_height * 0.35 + window_y, z + window_z + 0.01),
                             rotation=(0, rotation_y, 0),
-                            color=color.rgba(255, 255, 200, 180),
+                            color=color.rgba(255, 255, 230, 180),  # Warm-tinted glass
                             double_sided=True
                         )
-                        self.entities.append(window)
 
-            self.entities.extend([building, roof])
+                        self.entities.extend([frame, window])
+
+            self.entities.extend([building, foundation, roof, cornice])
 
         elif building_type == 'asian':
             # Asian style - pagoda inspired
@@ -352,7 +404,7 @@ class Chunk:
                 model='cube',
                 scale=(building_width, base_height, building_width),
                 position=(x, base_height / 2, z),
-                color=temp_textures[building_type]
+                color=temp_textures['asian']
             )
 
             # Pagoda-style roof sections
@@ -363,8 +415,20 @@ class Chunk:
                     model='cube',
                     scale=(layer_size + 0.2, building_height * 0.1, layer_size + 0.2),
                     position=(x, base_height + i * STORY_HEIGHT * 0.3, z),
-                    color=color.dark_gray
+                    color=temp_textures['roof_light']
                 )
+
+                # Add decorative edges to roof
+                if i < roof_layers - 1:
+                    edge_size = layer_size + 0.3
+                    roof_edge = Entity(
+                        model='cube',
+                        scale=(edge_size, building_height * 0.02, edge_size),
+                        position=(x, base_height + i * STORY_HEIGHT * 0.3 + building_height * 0.06, z),
+                        color=temp_textures['asian_accent']
+                    )
+                    self.entities.append(roof_edge)
+
                 self.entities.append(roof_layer)
 
             # Add decorative windows - curved and ornate for Asian style
@@ -391,7 +455,7 @@ class Chunk:
                         scale=(window_width + 0.05, window_height + 0.05),
                         position=(x + window_x, base_height / 2 + window_y, z + window_z),
                         rotation=(0, rotation_y, 0),
-                        color=color.rgb(130, 0, 0),  # Darker frame
+                        color=color.rgb(110, 25, 25),  # Darker red frame
                         double_sided=True
                     )
 
@@ -401,9 +465,22 @@ class Chunk:
                         scale=(window_width, window_height),
                         position=(x + window_x, base_height / 2 + window_y, z + window_z + 0.01),
                         rotation=(0, rotation_y, 0),
-                        color=color.rgba(200, 200, 255, 180),
+                        color=color.rgba(210, 210, 255, 180),  # Enhanced window glass
                         double_sided=True
                     )
+
+                    # Decorative horizontal bars - Asian style
+                    for j in range(3):
+                        bar_y = window_y - window_height / 2 + (j + 1) * window_height / 4
+                        bar = Entity(
+                            model='quad',
+                            scale=(window_width, 0.02),
+                            position=(x + window_x, base_height / 2 + bar_y, z + window_z + 0.02),
+                            rotation=(0, rotation_y, 0),
+                            color=temp_textures['asian_accent'],
+                            double_sided=True
+                        )
+                        self.entities.append(bar)
 
                     self.entities.extend([frame, window])
 
@@ -416,7 +493,7 @@ class Chunk:
                 model='cube',
                 scale=(building_width, base_height, building_width),
                 position=(x, base_height / 2, z),
-                color=temp_textures[building_type]
+                color=temp_textures['european']
             )
 
             # Create a pitched roof using two cubes
@@ -424,14 +501,14 @@ class Chunk:
                 model='cube',
                 scale=(building_width, building_height * 0.15, building_width / 2),
                 position=(x, base_height + building_height * 0.075, z - building_width / 4),
-                color=color.dark_gray
+                color=temp_textures['roof']
             )
 
             roof_back = Entity(
                 model='cube',
                 scale=(building_width, building_height * 0.15, building_width / 2),
                 position=(x, base_height + building_height * 0.075, z + building_width / 4),
-                color=color.dark_gray
+                color=temp_textures['roof']
             )
 
             # Add chimney
@@ -440,7 +517,7 @@ class Chunk:
                     model='cube',
                     scale=(0.1, building_height * 0.2, 0.1),
                     position=(x + building_width * 0.3, base_height + building_height * 0.2, z + building_width * 0.3),
-                    color=color.rgb(139, 0, 0)
+                    color=temp_textures['classic']  # Brick chimney
                 )
                 self.entities.append(chimney)
 
@@ -473,7 +550,7 @@ class Chunk:
                             scale=(window_width + 0.04, window_height + 0.04),
                             position=(x + window_x, base_height / 2 + window_y, z + window_z),
                             rotation=(0, rotation_y, 0),
-                            color=color.white,
+                            color=temp_textures['european_accent'],
                             double_sided=True
                         )
 
@@ -483,7 +560,7 @@ class Chunk:
                             scale=(window_width, window_height),
                             position=(x + window_x, base_height / 2 + window_y, z + window_z + 0.01),
                             rotation=(0, rotation_y, 0),
-                            color=color.rgba(220, 230, 255, 170),
+                            color=color.rgba(225, 235, 255, 170),  # Enhanced window glass
                             double_sided=True
                         )
 
@@ -493,7 +570,7 @@ class Chunk:
                             scale=(window_width, 0.02),
                             position=(x + window_x, base_height / 2 + window_y, z + window_z + 0.02),
                             rotation=(0, rotation_y, 0),
-                            color=color.white,
+                            color=temp_textures['european_accent'],
                             double_sided=True
                         )
 
@@ -502,7 +579,7 @@ class Chunk:
                             scale=(0.02, window_height),
                             position=(x + window_x, base_height / 2 + window_y, z + window_z + 0.02),
                             rotation=(0, rotation_y, 0),
-                            color=color.white,
+                            color=temp_textures['european_accent'],
                             double_sided=True
                         )
 
@@ -518,7 +595,7 @@ class Chunk:
                 model='cube',
                 scale=(building_width * 0.8, building_height, building_width * 0.8),
                 position=(x, building_height / 2, z),
-                color=temp_textures[building_type]
+                color=temp_textures['futuristic']
             )
 
             # Add large glass panels
@@ -550,7 +627,7 @@ class Chunk:
                     scale=(window_width, window_height),
                     position=(x + window_x, building_height / 2, z + window_z),
                     rotation=(0, rotation_y, 0),
-                    color=color.rgba(100, 200, 255, 200),
+                    color=color.rgba(120, 200, 235, 200),  # Enhanced blue tinted glass
                     double_sided=True
                 )
 
@@ -564,26 +641,30 @@ class Chunk:
                         scale=(window_width, 0.03),
                         position=(x + window_x, building_height / 2 + line_y, z + window_z + 0.01),
                         rotation=(0, rotation_y, 0),
-                        color=color.rgba(100, 220, 255, 255),
+                        color=temp_textures['futuristic_accent'],
                         double_sided=True
                     )
                     self.entities.append(line)
 
                 self.entities.append(glass_panel)
 
-            # Random additional structures
+            # Random additional structures - asymmetric extensions
             for _ in range(random.randint(1, 3)):
                 dx = random.uniform(-0.3, 0.3)
                 dz = random.uniform(-0.3, 0.3)
                 height_factor = random.uniform(0.3, 0.8)
                 width_factor = random.uniform(0.2, 0.5)
 
+                # Create unique angles for futuristic look
+                rotation_y = random.uniform(0, 15)
+
                 extension = Entity(
                     model='cube',
                     scale=(
                     building_width * width_factor, building_height * height_factor, building_width * width_factor),
                     position=(x + dx, building_height * height_factor / 2, z + dz),
-                    color=color.rgb(180, 255, 255)
+                    rotation=(0, rotation_y, 0),
+                    color=temp_textures['futuristic_accent']
                 )
 
                 # Add windows to extensions too
@@ -591,7 +672,7 @@ class Chunk:
                 ext_window_width = building_width * width_factor * 0.6
 
                 for side in range(4):
-                    rotation_y = side * 90
+                    ext_rotation_y = side * 90 + rotation_y
 
                     # Position depends on the side
                     ext_window_x = dx
@@ -609,27 +690,47 @@ class Chunk:
                         ext_window_x = dx - building_width * width_factor * 0.51
                         ext_window_z = dz
 
+                    # Apply rotation offset
+                    pos_x = ext_window_x * math.cos(math.radians(rotation_y)) - ext_window_z * math.sin(
+                        math.radians(rotation_y))
+                    pos_z = ext_window_x * math.sin(math.radians(rotation_y)) + ext_window_z * math.cos(
+                        math.radians(rotation_y))
+
                     ext_window = Entity(
                         model='quad',
                         scale=(ext_window_width, ext_window_height),
-                        position=(x + ext_window_x, building_height * height_factor / 2, z + ext_window_z),
-                        rotation=(0, rotation_y, 0),
-                        color=color.rgba(120, 220, 255, 180),
+                        position=(x + pos_x, building_height * height_factor / 2, z + pos_z),
+                        rotation=(0, ext_rotation_y, 0),
+                        color=color.rgba(140, 230, 255, 180),  # Enhanced window color
                         double_sided=True
                     )
                     self.entities.append(ext_window)
 
                 self.entities.append(extension)
 
-            # Top sphere
+            # Top feature - either a sphere or an antenna
             if random.random() < 0.5 and building_height > 5:
                 sphere = Entity(
                     model='sphere',
                     scale=(building_width * 0.5, building_width * 0.5, building_width * 0.5),
                     position=(x, building_height + building_width * 0.25, z),
-                    color=color.white
+                    color=temp_textures['futuristic']
                 )
                 self.entities.append(sphere)
+            else:
+                antenna = Entity(
+                    model='cube',
+                    scale=(0.05, building_height * 0.3, 0.05),
+                    position=(x, building_height + building_height * 0.15, z),
+                    color=temp_textures['modern_accent']
+                )
+                antenna_top = Entity(
+                    model='sphere',
+                    scale=(0.1, 0.1, 0.1),
+                    position=(x, building_height + building_height * 0.3, z),
+                    color=temp_textures['futuristic_accent']
+                )
+                self.entities.extend([antenna, antenna_top])
 
             self.entities.append(main_tower)
 
@@ -663,7 +764,7 @@ class Chunk:
             model='cube',
             scale=(0.1, trunk_height, 0.1),
             position=(x, trunk_height / 2, z),
-            color=color.brown
+            color=temp_textures['tree_trunk']
         )
 
         leaves_size = random.uniform(0.4, 0.6)
@@ -738,9 +839,9 @@ class Chunk:
         offset_x = 0.0
         offset_z = 0.0
         if direction.x != 0:
-            offset_z = 0.2 if random.random() > 0.5 else -0.2  # Left or right lane
+            offset_z = 0.3 if random.random() > 0.5 else -0.3  # Left or right lane - widened offset for wider streets
         else:
-            offset_x = 0.2 if random.random() > 0.5 else -0.2  # Left or right lane
+            offset_x = 0.3 if random.random() > 0.5 else -0.3  # Left or right lane - widened offset for wider streets
 
         # Create vehicle
         vehicle = Entity(
@@ -776,8 +877,19 @@ class Chunk:
 
 def get_chunk_coords(position):
     """Convert world coordinates to chunk coordinates"""
-    chunk_x = math.floor(position.x / CHUNK_SIZE)
-    chunk_z = math.floor(position.z / CHUNK_SIZE)
+    # Handle case where position might be a tuple or Vec3
+    try:
+        if isinstance(position, tuple):
+            chunk_x = math.floor(position[0] / CHUNK_SIZE)
+            chunk_z = math.floor(position[2] / CHUNK_SIZE)
+        else:  # Assume it's a Vec3 or similar object with x,z attributes
+            chunk_x = math.floor(position.x / CHUNK_SIZE)
+            chunk_z = math.floor(position.z / CHUNK_SIZE)
+    except Exception as e:
+        print(f"Error in get_chunk_coords: {e}")
+        # Default to origin chunk if there's an error
+        return (0, 0)
+
     return chunk_x, chunk_z
 
 
@@ -980,18 +1092,27 @@ def distance_3d(pos1, pos2):
 def update():
     """Update each frame"""
     try:
-        update_visible_chunks()
-        update_day_night_cycle()
-        update_vehicles()
+        # Ensure player is defined before updating
+        if 'player' in globals():
+            update_visible_chunks()
+            update_day_night_cycle()
+            update_vehicles()
 
-        # Display current time and info (only update every 3 seconds to save performance)
-        if int(time.time()) % 3 == 0:
-            hours = int(current_time * 24)
-            minutes = int((current_time * 24 * 60) % 60)
-            debug_text.text = f"Time: {hours:02d}:{minutes:02d}\nPosition: {player.position}\nChunks: {len(loaded_chunks)}"
+            # Check if player has fallen below safety level
+            if player.y < -10:
+                print("Player fell through the world - respawning")
+                player.position = SPAWN_POSITION
+                player.y = PLAYER_HEIGHT / 2
+
+            # Display current time and info (only update every 3 seconds to save performance)
+            if int(time.time()) % 3 == 0:
+                hours = int(current_time * 24)
+                minutes = int((current_time * 24 * 60) % 60)
+                debug_text.text = f"Time: {hours:02d}:{minutes:02d}\nPosition: {player.position}\nChunks: {len(loaded_chunks)}"
     except Exception as e:
         print(f"Error in update: {e}")
-        debug_text.text = f"Error: {e}"
+        if 'debug_text' in globals():
+            debug_text.text = f"Error: {e}"
 
 
 def input(key):
@@ -1005,44 +1126,89 @@ window.title = '3D Infinite City'
 window.borderless = False
 window.exit_button.visible = True
 
-# Set up player with realistic height and positioned on a road
-player = FirstPersonController(position=(1.5, PLAYER_HEIGHT / 2, 1.5))
+# Create safety floor to prevent falling into void
+safety_floor = Entity(
+    model='plane',
+    scale=1000,
+    y=-1,
+    collider='box',
+    visible=False
+)
+
+# Create initial loading message
+loading_text = Text(
+    text="Loading city...",
+    origin=(0, 0),
+    position=(0, 0),
+    scale=2,
+    color=color.white
+)
 
 
-# Ensure initial chunks are loaded
+# Pre-generate initial chunks before spawning player
 def initialize_city():
     """Force the initial chunk loading to ensure the city is visible at startup"""
-    player_chunk = get_chunk_coords(player.position)
-    print(f"Initial player position: {player.position}, chunk: {player_chunk}")
+    # Calculate the chunk where the player will spawn
+    spawn_chunk_x = math.floor(SPAWN_POSITION[0] / CHUNK_SIZE)
+    spawn_chunk_z = math.floor(SPAWN_POSITION[2] / CHUNK_SIZE)
 
-    # Pre-load the starting chunks
+    print(f"Initializing city around spawn point {SPAWN_POSITION}")
+    print(f"Spawn chunk: ({spawn_chunk_x}, {spawn_chunk_z})")
+
+    # Pre-load the chunks around spawn point
     for dx in range(-1, 2):
         for dz in range(-1, 2):
-            chunk_coords = (player_chunk[0] + dx, player_chunk[1] + dz)
+            chunk_coords = (spawn_chunk_x + dx, spawn_chunk_z + dz)
             loaded_chunks[chunk_coords] = Chunk(chunk_coords)
 
     print(f"Loaded {len(loaded_chunks)} initial chunks")
 
+    # Hide loading text once chunks are ready
+    loading_text.visible = False
 
-# Create sun
-sun = DirectionalLight()
-sun.look_at(Vec3(0, -1, 0))
+    # Now that the environment is ready, create the player
+    create_player()
 
-# Create debug text
-debug_text = Text(text="Loading city...", position=(0, 0.45), origin=(0, 0), scale=1.5)
 
-# Set up fog for atmosphere and limiting view distance (use lighter fog at startup)
-scene.fog_density = 0.005  # Reduced fog density for better initial visibility
-scene.fog_color = color.rgb(135, 206, 235)  # Sky blue color for daytime start
+def create_player():
+    """Create the player after the city has been initialized"""
+    global player
 
-# Game instructions
-game_instructions = Text(
-    text="WASD to move, Space to jump, Mouse to look around, ESC to quit",
-    origin=(0, 0),
-    position=(0, -0.45),
-)
+    # Set up player with the defined spawn position
+    player = FirstPersonController(
+        position=SPAWN_POSITION,
+        y=PLAYER_HEIGHT / 2,
+        origin_y=-0.5  # Adjust origin to ensure feet are on ground
+    )
 
-# Call initialization before running
+    # Create sun
+    global sun
+    sun = DirectionalLight()
+    sun.look_at(Vec3(0, -1, 0))
+
+    # Create debug text
+    global debug_text
+    debug_text = Text(
+        text=f"Position: {SPAWN_POSITION}",
+        position=(0, 0.45),
+        origin=(0, 0),
+        scale=1.5
+    )
+
+    # Game instructions
+    global game_instructions
+    game_instructions = Text(
+        text="WASD to move, Space to jump, Mouse to look around, ESC to quit",
+        origin=(0, 0),
+        position=(0, -0.45),
+    )
+
+    # Set up fog for atmosphere (lighter fog for better visibility)
+    scene.fog_density = 0.005
+    scene.fog_color = color.rgb(135, 206, 235)  # Sky blue color for daytime
+
+
+# Call initialization before running the game
 initialize_city()
 
 # Run the game
